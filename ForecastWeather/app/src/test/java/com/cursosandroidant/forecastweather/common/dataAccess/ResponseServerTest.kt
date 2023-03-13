@@ -1,5 +1,7 @@
 package com.cursosandroidant.forecastweather.common.dataAccess
 
+import com.cursosandroidant.forecastweather.entities.WeatherForecastEntity
+import com.google.gson.Gson
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.hamcrest.CoreMatchers.*
@@ -30,14 +32,14 @@ class ResponseServerTest {
     }
 
     @Test
-    fun readJsonFileSuccess() {
+    fun `read Json File Success`() {
         val reader = JSONFileLoader().loadJSONString("weather_forecast_response_success.json")
         assertThat(reader, `is`(notNullValue()))
         assertThat(reader, containsString("America/Mexico_City"))
     }
 
     @Test
-    fun getWeatherForecastFailResponse() {
+    fun `get Weather Forecast FailResponse`() {
         val response = MockResponse()
             .setResponseCode(HttpURLConnection.HTTP_OK)
             .setBody(JSONFileLoader().loadJSONString("weather_forecast_response_fail.json") ?: "{errorCode:34}")
@@ -47,12 +49,26 @@ class ResponseServerTest {
     }
 
     @Test
-    fun getWeatherForecastTimezoneExist() {
+    fun `get weatherForecast and check timezone exist`() {
         val response = MockResponse()
             .setResponseCode(HttpURLConnection.HTTP_OK)
             .setBody(JSONFileLoader().loadJSONString("weather_forecast_response_success.json") ?: "{errorCode:34}")
         mockWebServer.enqueue(response)
 
         assertThat(response.getBody()?.readUtf8(), containsString("\"timezone\""))
+    }
+
+    @Test
+    fun `get weatherForecast and contains hourly list no empty`() {
+        val response = MockResponse()
+            .setResponseCode(HttpURLConnection.HTTP_OK)
+            .setBody(JSONFileLoader().loadJSONString("weather_forecast_response_success.json") ?: "{errorCode:34}")
+        mockWebServer.enqueue(response)
+
+        assertThat(response.getBody()?.readUtf8(), containsString("hourly"))
+
+        //Comprobar que nuestro pronostico por hora no es null
+        val json = Gson().fromJson(response.getBody()?.readUtf8() ?: "", WeatherForecastEntity::class.java)
+        assertThat(json.hourly.isEmpty(), `is`(false))
     }
 }
